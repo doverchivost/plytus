@@ -1,0 +1,40 @@
+package com.plytus.plytus.services;
+
+import com.plytus.plytus.model.Expense;
+import com.plytus.plytus.repository.ExpenseRepository;
+import com.plytus.plytus.services.ExpenseService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+
+import javax.management.Query;
+import java.util.ArrayList;
+import java.util.List;
+
+@Component
+public class ExpenseServiceDefault implements ExpenseService {
+
+    private ExpenseRepository expenseRepository;
+
+    @Autowired
+    public  ExpenseServiceDefault(ExpenseRepository expenseRepository) {
+        this.expenseRepository = expenseRepository;
+    }
+
+    @Override
+    public List<Expense> getExpenses() {
+        List<Expense> result = new ArrayList<>();
+        expenseRepository.findAll().forEach(result::add);
+        return result;
+    }
+
+    @Override
+    public Expense getExpenseById(Long id) {
+        return expenseRepository.findById(id).get();
+    }
+
+//    @Override
+//    public Expense saveNewExpense(Expense expense) {
+//        //Query query = session
+//        return expenseRepository.save(expense);
+//    }
+}
