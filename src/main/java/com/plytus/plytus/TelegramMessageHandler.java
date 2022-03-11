@@ -33,13 +33,13 @@ public class TelegramMessageHandler {
             String msgPart = msg[i];
             if (Pattern.matches(decimalWithDotPattern, msgPart)) {
                 expensePrice = Double.parseDouble(msgPart);
-                String[] name = Arrays.copyOfRange(msg, 0, i-1);
+                String[] name = Arrays.copyOfRange(msg, 0, i);
                 expenseName = String.join(" ", name);
                 break;
             }
             else if (Pattern.matches(decimalWithComaPattern, msgPart)) {
                 expensePrice = Double.parseDouble(msgPart.replace(",", "."));
-                String[] name = Arrays.copyOfRange(msg, 0, i-1);
+                String[] name = Arrays.copyOfRange(msg, 0, i);
                 expenseName = String.join(" ", name);
                 break;
             }
