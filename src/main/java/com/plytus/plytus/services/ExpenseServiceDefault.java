@@ -32,9 +32,8 @@ public class ExpenseServiceDefault implements ExpenseService {
         return expenseRepository.findById(id).get();
     }
 
-//    @Override
-//    public Expense saveNewExpense(Expense expense) {
-//        //Query query = session
-//        return expenseRepository.save(expense);
-//    }
+    @Override
+    public Expense saveNewExpense(Expense expense) {
+        return expenseRepository.save(expense);
+    }
 }

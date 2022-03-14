@@ -1,5 +1,8 @@
 package com.plytus.plytus.model;
 
+import org.hibernate.annotations.GenericGenerator;
+import org.hibernate.annotations.Parameter;
+
 import javax.persistence.*;
 import java.util.Objects;
 
@@ -8,7 +11,8 @@ import java.util.Objects;
 public class Expense {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(name="expense_id", nullable = false, updatable = false)
+    @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
     //категория - category
     //пользователь, кому пренадлежит трата - user
@@ -32,7 +36,6 @@ public class Expense {
     public void setName(String name) { this.name = name; }
     public void setPrice(double price) { this.price = price; }
 
-    //по хорошему Override equals, hashCode и toString
     //пример: https://github.com/ivan909020/shop-telegram-bot/blob/405c8a24fd6d60f0026831972f209685b5936592/admin-panel/src/main/java/ua/ivan909020/admin/models/entities/Client.java
 
     @Override

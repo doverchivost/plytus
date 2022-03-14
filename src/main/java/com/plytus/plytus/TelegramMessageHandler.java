@@ -45,11 +45,8 @@ public class TelegramMessageHandler {
             }
         }
         Expense expense = new Expense(expenseName, expensePrice);
-        //хз как правильно вызвать не статик в статик
-        //new ExpenseController().addExpense(expense);
-        //Long idOfAddedExpense = expenseService.saveNewExpense(expense).getId();
-        //expenseService.saveNewExpense(expense);
-        return "трата БУДЕТ добавлена с id =  (пока нет)" +
+        Long idOfAddedExpense = expenseService.saveNewExpense(expense).getId();
+        return "трата добавлена с id = " + idOfAddedExpense +
                 "\n трата: ~" + expenseName + "~ \n ее цена: ~" + expensePrice + "~";
     }
 }

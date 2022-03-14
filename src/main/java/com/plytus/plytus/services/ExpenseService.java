@@ -10,5 +10,5 @@ public interface ExpenseService {
 
     Expense getExpenseById(Long id);
 
-    //Expense saveNewExpense(Expense expense);
+    Expense saveNewExpense(Expense expense);
 }
