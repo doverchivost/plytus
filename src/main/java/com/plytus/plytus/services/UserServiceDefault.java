@@ -1,7 +1,6 @@
 package com.plytus.plytus.services;
 
 import com.plytus.plytus.model.User;
-import com.plytus.plytus.repository.ExpenseRepository;
 import com.plytus.plytus.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 

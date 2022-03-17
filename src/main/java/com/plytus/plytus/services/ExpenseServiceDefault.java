@@ -2,11 +2,8 @@ package com.plytus.plytus.services;
 
 import com.plytus.plytus.model.Expense;
 import com.plytus.plytus.repository.ExpenseRepository;
-import com.plytus.plytus.services.ExpenseService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-
-import javax.management.Query;
 import java.util.ArrayList;
 import java.util.List;
 
