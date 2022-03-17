@@ -13,7 +13,7 @@ import java.util.List;
 @Component
 public class ExpenseServiceDefault implements ExpenseService {
 
-    private ExpenseRepository expenseRepository;
+    private final ExpenseRepository expenseRepository;
 
     @Autowired
     public  ExpenseServiceDefault(ExpenseRepository expenseRepository) {
