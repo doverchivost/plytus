@@ -11,8 +11,6 @@ public class Expense {
     @Column(name="expense_id", nullable = false, updatable = false)
     @GeneratedValue(strategy=GenerationType.AUTO)
     private Long id;
-    //категория - category
-    //пользователь, кому пренадлежит трата - user
 
     @Column(name = "expense_date", nullable = false)
     private Date date;
@@ -23,12 +21,23 @@ public class Expense {
     @Column(name = "expense_price", unique = false, nullable = false)
     private double price;
 
-    //категория и юзер внешний ключ
-    public Expense(String name, Date date, double price) {
+    @ManyToOne(fetch = FetchType.LAZY)//(cascade = CascadeType.PERSIST)//(cascade = CascadeType.ALL)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @ManyToOne
+    @JoinColumn(name = "owned_by")
+    private User owner;
+
+    public Expense(String name, Date date, double price, Category category, User owner) {
         this.name = name;
         this.date = date;
         this.price = price;
+        this.category = category;
+        this.owner = owner;
     }
+
+    public Expense() { super(); }
 
     public Long getId() { return id; }
     public Date getDate() { return date; }
@@ -40,5 +49,8 @@ public class Expense {
     public void setName(String name) { this.name = name; }
     public void setPrice(double price) { this.price = price; }
 
-    //пример: https://github.com/ivan909020/shop-telegram-bot/blob/405c8a24fd6d60f0026831972f209685b5936592/admin-panel/src/main/java/ua/ivan909020/admin/models/entities/Client.java
+    public Category getCategory() { return category; }
+    public User getOwner() { return owner; }
+    public void setCategory(Category category) { this.category = category; }
+    public void setOwner(User owner) { this.owner = owner; }
 }

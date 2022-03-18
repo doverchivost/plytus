@@ -1,27 +1,34 @@
 package com.plytus.plytus;
 
+import com.plytus.plytus.model.Category;
 import com.plytus.plytus.model.Expense;
+import com.plytus.plytus.model.User;
+import com.plytus.plytus.services.CategoryService;
 import com.plytus.plytus.services.ExpenseService;
+import com.plytus.plytus.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
-import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.Date;
-import java.util.Locale;
+import java.util.*;
 import java.util.regex.Pattern;
 
 @Controller
 public class TelegramMessageHandler {
 
     private static ExpenseService expenseService;
+    private static UserService userService;
+    private static CategoryService categoryService;
 
     @Autowired
-    public TelegramMessageHandler(ExpenseService expenseService) {
+    public TelegramMessageHandler(ExpenseService expenseService, UserService userService, CategoryService categoryService) {
         this.expenseService = expenseService;
+        this.userService = userService;
+        this.categoryService = categoryService;
     }
 
     public static String answer(long chatId, String message) {
+        User expenseUser = checkUser(chatId);
+
         String decimalWithDotPattern = "([0-9]*)\\.([0-9]*)";
         String decimalWithComaPattern = "([0-9]*),([0-9]*)";
         String answer = "";
@@ -53,10 +60,12 @@ public class TelegramMessageHandler {
                         "   *Категория 634 доставка еды*";
                 break;
             case "/list_of_expenses":
-                answer = "я выведу список всех трат";
+                //answer = "я выведу список всех трат";
+                answer = monthExpenseMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/list_of_categories":
-                answer = "я выведу список категорий трат за месяц";
+                //answer = "я выведу список категорий трат за месяц";
+                answer = monthCategoryMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/list_with_percentage":
                 answer = "я выведу список категорий трат за месяц в процентах";
@@ -70,18 +79,51 @@ public class TelegramMessageHandler {
 
         String command = message.split(" ")[0].toLowerCase();
         if (command.equals("удалить") || command.equals("delete")) {
-            int expenseIdToDelete = Integer.parseInt(message.split(" ")[1]);
-            answer = "БУДЕТ удалена трата с id = " + expenseIdToDelete;
-            //return answer;
+            long expenseIdToDelete = Long.parseLong(message.split(" ")[1]);
+            boolean expenseExist = checkExpenseExist(expenseIdToDelete);
+            if (expenseExist) {
+                Expense expenseToDelete = expenseService.getExpenseById(expenseIdToDelete);
+                if (expenseToDelete.getOwner().getId() == expenseUser.getId()) {
+                    expenseUser.getExpenses().remove(expenseToDelete);
+                    expenseToDelete.getCategory().getExpenses().remove(expenseToDelete);
+                    expenseService.deleteExpense(expenseToDelete);
+                    answer = "Удалена трата с id = " + expenseIdToDelete;
+                }
+                else {
+                    answer = "Это не ваша трата! Вы не можете ее удалить.";
+                }
+            }
+            else {
+                answer = "Такой траты не существует!";
+            }
         }
         else if (command.equals("категория") || command.equals("category")) {
-            int expenseId = Integer.parseInt(message.split(" ")[1]);
-            String newCategoryName = message.split(" ")[2].toLowerCase();
-            //проверить есть ли у юзера такая категория
-            //если да не создавая новую изменить внешний ключ на категорию в сущности
-            //если нет добавить в Категории новую категорию, изменить саму трату
-            answer = "у траты с id = " + expenseId + " будет категория ~" + newCategoryName + "~";
-            //return answer;
+            String[] msg = message.split(" ");
+            long expenseId = Long.parseLong(msg[1]);
+            if (msg.length > 2) {
+                String[] name = Arrays.copyOfRange(msg, 2, msg.length);
+                String newCategoryName =String.join(" ", name);
+                Category newCategory = checkCategory(expenseUser, newCategoryName);
+
+                boolean expenseExist = checkExpenseExist(expenseId);
+                if (expenseExist) {
+                    Expense expense = expenseService.getExpenseById(expenseId);
+                    if (expense.getOwner().getId() == expenseUser.getId()) {
+                        Expense expenseToChange = expenseService.getExpenseById(expenseId);
+                        expenseToChange.setCategory(newCategory);
+                        expenseService.saveNewExpense(expenseToChange);
+                        answer = "У траты с id = ~" + expenseToChange.getId() + "~ теперь \n" +
+                                "категория = ~" + expenseToChange.getCategory().getName() + "~";
+                    } else {
+                        answer = "Это не ваша трата! Вы не можете менять ее категорию.";
+                    }
+                } else {
+                    answer = "Такой траты не существует!";
+                }
+            }
+            else {
+                answer = "Неправильная команда";
+            }
         }
         else if (message.split("\n").length > 1) {
             if (Character.isDigit(message.split("\n")[1].charAt(0))) {
@@ -96,17 +138,23 @@ public class TelegramMessageHandler {
                 else if (Pattern.matches(decimalWithComaPattern, msgPrice))
                     expensePrice = Double.parseDouble(msgPrice.replace(",", "."));
 
-                String expenseCategory = "";
+                String categoryName = "";
                 if (msg.length >= 3)
-                    expenseCategory = msg[2].toLowerCase();
+                    categoryName = msg[2].toLowerCase().trim();
                 else
-                    expenseCategory = expenseName;
+                    categoryName = expenseName;
 
-                Expense expense = new Expense(expenseName, expenseDate, expensePrice);
+                Category expenseCategory = checkCategory(expenseUser, categoryName);
+
+                Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
                 Long expenseId = expenseService.saveNewExpense(expense).getId();
                 answer = "Добавлена трата с \n" +
-                        "id = ~" + expenseId + "~\nname = ~" + expenseName + "~\n" +
-                        "price = ~" + expensePrice + "~\ndate = " + expenseDate + "~";
+                        "id = ~" + expenseId + "~\n" +
+                        "названием = ~" + expenseName + "~\n" +
+                        "ценой = ~" + expensePrice + "~\n" +
+                        "датой = ~" + expenseDate + "~\n" +
+                        "категорией = ~" + expenseCategory.getName() + "~\n" +
+                        "пользователем = ~" + expenseUser.getTg_id() + "~";
             }
         }
         else {
@@ -114,33 +162,95 @@ public class TelegramMessageHandler {
         }
 
         return answer;
+    }
 
-        /*
-        //пока без проверки на сообщения, т.е. только добавления трат "вкусное мороженое 15"
-        String[] msg = message.split(" ");
-        String expenseName = null;
-        double expensePrice = 0;
+    private static User checkUser(long id) {
+        long dbId = userService.userExists(id);
+        if (dbId < 0) {
+            User newUser = new User(id);
+            return userService.saveNewUser(newUser);
+        }
+        else {
+            return userService.getUserById(dbId);
+        }
+    }
 
-
-
-        for (int i = msg.length - 1; i > 0; i--){
-            String msgPart = msg[i];
-            if (Pattern.matches(decimalWithDotPattern, msgPart)) {
-                expensePrice = Double.parseDouble(msgPart);
-                String[] name = Arrays.copyOfRange(msg, 0, i);
-                expenseName = String.join(" ", name);
-                break;
-            }
-            else if (Pattern.matches(decimalWithComaPattern, msgPart)) {
-                expensePrice = Double.parseDouble(msgPart.replace(",", "."));
-                String[] name = Arrays.copyOfRange(msg, 0, i);
-                expenseName = String.join(" ", name);
-                break;
+    private static Category checkCategory(User user, String categoryName) {
+        Set<Category> userCategories = user.getCategories();
+        if (userCategories != null) {
+            for (Category userCategory : userCategories) {
+                String name = userCategory.getName();
+                if (name.equals(categoryName))
+                    return userCategory;
             }
         }
-        Expense expense = new Expense(expenseName, expensePrice);
-        Long idOfAddedExpense = expenseService.saveNewExpense(expense).getId();
-        return "трата добавлена с id = " + idOfAddedExpense +
-                "\n трата: ~" + expenseName + "~ \n ее цена: ~" + expensePrice + "~";*/
+        Category newCategory = new Category(categoryName, user);
+        categoryService.saveNewCategory(newCategory);
+        return newCategory;
+    }
+
+    private static boolean checkExpenseExist(long id) {
+        List<Expense> allExpenses = expenseService.getExpenses();
+        if (allExpenses != null) {
+            for (Expense expense : allExpenses)
+                if (expense.getId() == id) return true;
+        }
+        return false;
+    }
+
+    private static Set<Expense> getAllUserExpensesForCurrentMonth(User user) {
+        Set<Expense> allExpenses = user.getExpenses();
+        Set<Expense> monthExpenses = new HashSet<>();
+
+        Calendar calendar = Calendar.getInstance();
+        //calendar.add(Calendar.MONTH, - 1);
+        //calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
+        calendar.set(Calendar.DAY_OF_MONTH, 1);
+        calendar.set(Calendar.HOUR_OF_DAY, 0);
+        Date currentMonth = calendar.getTime();
+
+        for (Expense expense : allExpenses) {
+            if (expense.getDate().after(currentMonth)) {
+                monthExpenses.add(expense);
+            }
+        }
+        return monthExpenses;
+    }
+
+    private static String monthExpenseMessage(Set<Expense> expenseSet) {
+        String answer = "id) название (категория) : цена\n\n";
+        double priceTotal = 0;
+        for (Expense expense : expenseSet) {
+            answer += String.format("%1$s) %2$s (%3$s) : %4$.2f\n",
+                    expense.getId(), expense.getName(), expense.getCategory().getName(), expense.getPrice());
+            priceTotal += expense.getPrice();
+        }
+        answer += String.format("\nСумма всех трат за месяц: %.2f", priceTotal);
+        return answer;
+    }
+
+    private static String monthCategoryMessage(Set<Expense> expenseSet) {
+        String answer = "категория - сумма\n\n";
+        HashMap<String, Double> categoryPrice = new HashMap<String, Double>();
+        for (Expense expense : expenseSet) {
+            String expenseCategory = expense.getCategory().getName();
+            if (categoryPrice.containsKey(expenseCategory)) {
+                double price = expense.getPrice() + categoryPrice.get(expenseCategory);
+                categoryPrice.replace(expenseCategory, price);
+            }
+            else {
+                categoryPrice.put(expenseCategory, expense.getPrice());
+            }
+        }
+
+        double priceTotal = 0;
+        Set<String> keys = categoryPrice.keySet();
+        for (String key : keys) {
+            double price = categoryPrice.get(key);
+            answer += String.format("%s - %.2f\n", key, price);
+            priceTotal += price;
+        }
+        answer += String.format("\nСумма всех трат за месяц: %.2f", priceTotal);
+        return answer;
     }
 }

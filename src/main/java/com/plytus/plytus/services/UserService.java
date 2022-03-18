@@ -11,4 +11,6 @@ public interface UserService {
     User getUserById(Long id);
 
     User saveNewUser(User user);
+
+    long userExists(long tg_id);
 }

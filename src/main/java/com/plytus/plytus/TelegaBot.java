@@ -3,16 +3,12 @@ package com.plytus.plytus;
 import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Document;
-//import com.pengrad.telegrambot.model.File;
-import com.pengrad.telegrambot.model.MessageEntity;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
-import com.pengrad.telegrambot.response.SendResponse;
 
 import java.io.*;
-import java.util.Locale;
 
 public class TelegaBot {
     static TelegramBot bot;
@@ -21,15 +17,14 @@ public class TelegaBot {
     public static void run() {
         String telegram_token = System.getenv("plytus_bot_token");
         bot = new TelegramBot(telegram_token);
-        //TelegramMessageHandler handler = new TelegramMessageHandler();
 
         bot.setUpdatesListener(updates -> {
             for (Update update : updates) {
                 long chatId = update.message().chat().id();
                 String message = update.message().text();
                 String answer = "";
-                //System.out.println(message);
-                if (!message.isEmpty()) {
+                if (message != null) {
+                    message = message.trim();
                     answer = TelegramMessageHandler.answer(chatId, message);
                     if (message.equals("/add_from_csv")) {
                         try {

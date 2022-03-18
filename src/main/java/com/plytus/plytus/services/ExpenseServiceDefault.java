@@ -3,11 +3,14 @@ package com.plytus.plytus.services;
 import com.plytus.plytus.model.Expense;
 import com.plytus.plytus.repository.ExpenseRepository;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.ArrayList;
 import java.util.List;
 
-@Component
+@Service
+@Transactional
 public class ExpenseServiceDefault implements ExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -32,5 +35,11 @@ public class ExpenseServiceDefault implements ExpenseService {
     @Override
     public Expense saveNewExpense(Expense expense) {
         return expenseRepository.save(expense);
+    }
+
+    @Override
+    @Transactional
+    public void deleteExpense(Expense expense) {
+        expenseRepository.queryDeleteById(expense.getId());
     }
 }
