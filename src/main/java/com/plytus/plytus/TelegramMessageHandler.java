@@ -32,6 +32,8 @@ public class TelegramMessageHandler {
 
         String decimalWithDotPattern = "([0-9]*)\\.([0-9]*)";
         String decimalWithComaPattern = "([0-9]*),([0-9]*)";
+        String decimalInteger = "([0-9]*)";
+
         String answer = "";
         switch (message) {
             case "/start":
@@ -140,7 +142,7 @@ public class TelegramMessageHandler {
 
                 String msgPrice = msg[1].trim();
                 double expensePrice = 0;
-                if (Pattern.matches(decimalWithDotPattern, msgPrice))
+                if (Pattern.matches(decimalWithDotPattern, msgPrice) || Pattern.matches(decimalInteger, msgPrice))
                     expensePrice = Double.parseDouble(msgPrice);
                 else if (Pattern.matches(decimalWithComaPattern, msgPrice))
                     expensePrice = Double.parseDouble(msgPrice.replace(",", "."));
@@ -162,6 +164,10 @@ public class TelegramMessageHandler {
                         "датой = ~" + expenseDate + "~\n" +
                         "категорией = ~" + expenseCategory.getName() + "~\n" +
                         "пользователем = ~" + expenseUser.getTg_id() + "~";
+            }
+
+            else {
+                answer = "Неверные параметры: цена";
             }
         }
         else {
