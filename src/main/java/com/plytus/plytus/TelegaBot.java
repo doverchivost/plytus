@@ -47,14 +47,7 @@ public class TelegaBot {
                     message = message.trim();
                     answer = TelegramMessageHandler.answer(chatId, message);
                     if (message.equals("/add_from_csv")) {
-                        try {
-                            BufferedInputStream bis = new BufferedInputStream(new FileInputStream(exampleCSV));
-                            byte[] file = bis.readAllBytes();
-                            bot.execute(new SendDocument(chatId, file).caption("example.csv").fileName("example.csv"));
-
-                        } catch (IOException e) {
-                            e.printStackTrace();
-                        }
+                        bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
                     }
                 }
                 else if (update.message().document() != null) {
