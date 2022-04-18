@@ -15,6 +15,9 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Calendar;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class TelegaBot {
     static TelegramBot bot;
@@ -23,6 +26,17 @@ public class TelegaBot {
     public static void run() {
         String telegram_token = System.getenv("plytus_bot_token");
         bot = new TelegramBot(telegram_token);
+
+        Timer timer = new Timer();
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                Calendar cal = Calendar.getInstance();
+                int dayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
+                if (dayOfMonth == 1)
+                    TelegramMessageHandler.sendMonthCSV();
+            }
+        }, 0, 24 * 60 * 60 * 1000);
 
         bot.setUpdatesListener(updates -> {
             for (Update update : updates) {

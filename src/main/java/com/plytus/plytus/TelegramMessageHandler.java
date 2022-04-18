@@ -1,7 +1,10 @@
 package com.plytus.plytus;
 
 import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
 import com.opencsv.exceptions.CsvException;
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.request.SendDocument;
 import com.plytus.plytus.model.Category;
 import com.plytus.plytus.model.Expense;
 import com.plytus.plytus.model.User;
@@ -11,8 +14,13 @@ import com.plytus.plytus.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
+import java.io.File;
 import java.io.FileReader;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -356,4 +364,60 @@ public class TelegramMessageHandler {
     }
 
 
+    public static void sendMonthCSV () {
+        List<User> allUsers = userService.getUsers();
+        for (User user : allUsers) {
+            Set<Expense> userExpenses = getAllUserExpensesForPreviousMonth(user);
+            long userTgId = user.getTg_id();
+            File reportFile = new File("src/main/java/userscsv/report" + userTgId + ".csv");
+            try {
+                FileWriter outputFile = new FileWriter(reportFile);
+                CSVWriter writer = new CSVWriter(outputFile);
+                String[] header = {"id", "название", "категория", "сумма", "дата"};
+                writer.writeNext(header);
+                double expenseSum = 0.0;
+                for (Expense expense : userExpenses) {
+                    String id = Long.toString(expense.getId());
+                    String name = expense.getName();
+                    String cat = expense.getCategory().getName();
+                    String price = Double.toString(expense.getPrice());
+                    String date = expense.getDate().toString();
+
+                    String[] data = {id, name, cat, price, date};
+                    writer.writeNext(data);
+                    expenseSum += expense.getPrice();
+                }
+                String[] data = {"всего:", " ", " ", Double.toString(expenseSum), " "};
+                writer.writeNext(data);
+                writer.close();
+                TelegaBot.bot.execute(new SendDocument(userTgId, reportFile).caption("month report.csv"));
+            }
+            catch (IOException e) {}
+            //id название категория сумма дата
+
+        }
+    }
+
+    private static Set<Expense> getAllUserExpensesForPreviousMonth(User user) {
+        Set<Expense> allExpenses = user.getExpenses();
+        Set<Expense> monthExpenses = new HashSet<>();
+
+        Calendar calendarThisMonth = Calendar.getInstance();
+        calendarThisMonth.set(Calendar.DAY_OF_MONTH, 1);
+        calendarThisMonth.set(Calendar.HOUR_OF_DAY, 0);
+        Date currentMonth = calendarThisMonth.getTime();
+
+        Calendar calendarPreviousMonth = Calendar.getInstance();
+        calendarPreviousMonth.set(Calendar.DAY_OF_MONTH, 1);
+        calendarPreviousMonth.set(Calendar.HOUR_OF_DAY, 0);
+        calendarPreviousMonth.set(Calendar.MONTH, -1);
+        Date previousMonth = calendarPreviousMonth.getTime();
+
+        for (Expense expense : allExpenses) {
+            if (expense.getDate().before(currentMonth) && expense.getDate().after(previousMonth)) {
+                monthExpenses.add(expense);
+            }
+        }
+        return monthExpenses;
+    }
 }
