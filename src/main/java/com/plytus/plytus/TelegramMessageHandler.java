@@ -27,6 +27,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Controller
 public class TelegramMessageHandler {
@@ -317,7 +318,8 @@ public class TelegramMessageHandler {
         for(Expense expense : expenseSet)
             priceTotal += expense.getPrice();
 
-        Map<String, Double> sortedByPrice = sort(categoryPrice, false);
+        //Map<String, Double> sortedByPrice = sort(categoryPrice, false);
+        Map<String, Double> sortedByPrice = sort(categoryPrice);
         for (String category : sortedByPrice.keySet()) {
             double price = sortedByPrice.get(category);
             double percentPrice = price / priceTotal * 100;
@@ -344,24 +346,14 @@ public class TelegramMessageHandler {
         return categoryPrice;
     }
 
-    private static <K extends Comparable<K>, V extends Comparable<V>> Map<K, V> sort(
-            final Map<K, V> unsorted,
-            final boolean order) {
-        final var list = new LinkedList<>(unsorted.entrySet());
+   private static Map<String, Double> sort(Map<String, Double> map) {
+       Map<String, Double> sortedMapReverseOrder =  map.entrySet().
+               stream().
+               sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())).
+               collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
 
-        list.sort((o1, o2) -> order
-                ? o1.getValue().compareTo(o2.getValue()) == 0
-                ? o1.getKey().compareTo(o2.getKey())
-                : o1.getValue().compareTo(o2.getValue())
-                : o2.getValue().compareTo(o1.getValue()) == 0
-                ? o2.getKey().compareTo(o1.getKey())
-                : o2.getValue().compareTo(o1.getValue()));
-        return list.stream().collect(
-                Collectors.toMap(
-                        Map.Entry::getKey, Map.Entry::getValue, (a, b) -> b, LinkedHashMap::new
-                )
-        );
-    }
+       return sortedMapReverseOrder;
+   }
 
 
     public static void sendMonthCSV () {
