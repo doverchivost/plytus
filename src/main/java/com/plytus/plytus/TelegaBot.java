@@ -5,10 +5,16 @@ import com.pengrad.telegrambot.UpdatesListener;
 import com.pengrad.telegrambot.model.Document;
 import com.pengrad.telegrambot.model.Update;
 import com.pengrad.telegrambot.model.request.ParseMode;
+import com.pengrad.telegrambot.request.GetFile;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.pengrad.telegrambot.request.SendMessage;
+import com.pengrad.telegrambot.response.GetFileResponse;
 
 import java.io.*;
+import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 public class TelegaBot {
     static TelegramBot bot;
@@ -43,6 +49,22 @@ public class TelegaBot {
                     answer = "ты отправил мне файл с расширением " + ext;
                     if (ext.equalsIgnoreCase("csv")) {
                         //обработать csv файл
+                        GetFile request = new GetFile(doc.fileId());
+                        GetFileResponse getFileResponse = bot.execute(request);
+                        com.pengrad.telegrambot.model.File csvFile = getFileResponse.file();
+                        String filePath = csvFile.filePath();
+
+                        try {
+                            String fullPath = bot.getFullFilePath(csvFile);
+                            InputStream is = new URL(fullPath).openStream();
+                            String fileName = "src/main/java/userscsv/user" + chatId + ".csv";
+                            Files.copy(is, Paths.get(fileName), StandardCopyOption.REPLACE_EXISTING);
+
+                            answer = TelegramMessageHandler.addExpensesFromSCV(fileName ,chatId);
+                            Files.delete(Paths.get(fileName));
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
                 else {
