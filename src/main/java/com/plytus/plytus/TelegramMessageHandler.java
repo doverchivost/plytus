@@ -1,5 +1,10 @@
 package com.plytus.plytus;
 
+import com.opencsv.CSVReader;
+import com.opencsv.CSVWriter;
+import com.opencsv.exceptions.CsvException;
+import com.pengrad.telegrambot.TelegramBot;
+import com.pengrad.telegrambot.request.SendDocument;
 import com.plytus.plytus.model.Category;
 import com.plytus.plytus.model.Expense;
 import com.plytus.plytus.model.User;
@@ -9,6 +14,16 @@ import com.plytus.plytus.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -20,6 +35,10 @@ public class TelegramMessageHandler {
     private static UserService userService;
     private static CategoryService categoryService;
 
+    static String decimalWithDotPattern = "([0-9]*)\\.([0-9]*)";
+    static String decimalWithComaPattern = "([0-9]*),([0-9]*)";
+    static String decimalInteger = "([0-9]*)";
+
     @Autowired
     public TelegramMessageHandler(ExpenseService expenseService, UserService userService, CategoryService categoryService) {
         this.expenseService = expenseService;
@@ -30,8 +49,8 @@ public class TelegramMessageHandler {
     public static String answer(long chatId, String message) {
         User expenseUser = checkUser(chatId);
 
-        String decimalWithDotPattern = "([0-9]*)\\.([0-9]*)";
-        String decimalWithComaPattern = "([0-9]*),([0-9]*)";
+
+
         String answer = "";
         switch (message) {
             case "/start":
@@ -73,7 +92,8 @@ public class TelegramMessageHandler {
                 answer = monthCategoryPercentMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/add_from_csv":
-                answer = "Файл-пример в формате csv";
+                answer = "Файл-пример в формате csv\n" +
+                        "Первая строка файла (названия колонок) будет игнорироваться";
                 break;
         }
 
@@ -139,11 +159,7 @@ public class TelegramMessageHandler {
                 Date expenseDate = new Date();
 
                 String msgPrice = msg[1].trim();
-                double expensePrice = 0;
-                if (Pattern.matches(decimalWithDotPattern, msgPrice))
-                    expensePrice = Double.parseDouble(msgPrice);
-                else if (Pattern.matches(decimalWithComaPattern, msgPrice))
-                    expensePrice = Double.parseDouble(msgPrice.replace(",", "."));
+                double expensePrice = priceFromString(msgPrice);
 
                 String categoryName = "";
                 if (msg.length >= 3)
@@ -163,12 +179,47 @@ public class TelegramMessageHandler {
                         "категорией = ~" + expenseCategory.getName() + "~\n" +
                         "пользователем = ~" + expenseUser.getTg_id() + "~";
             }
+
+            else {
+                answer = "Неверные параметры: цена";
+            }
         }
         else {
             answer = "что-то пошло не так :(";
         }
 
         return answer;
+    }
+
+    public static String addExpensesFromSCV(String fileName, long chatId) {
+        User expenseUser = checkUser(chatId);
+
+        try (CSVReader reader = new CSVReader(new FileReader(fileName))) {
+            List<String[]> lines = reader.readAll();
+            String[] firstRow = lines.get(0)[0].split(";");
+            if (firstRow[0].contains("название") && firstRow[1].contains("категория") &&
+                    firstRow[2].contains("цена") && firstRow[3].contains("дата")) {
+                for (int i = 1; i < lines.size(); i++) {
+                    String[] row = lines.get(i)[0].split(";");
+                    String expenseName = row[0].toLowerCase();
+                    String expCategory = row[1].toLowerCase();
+                    double expensePrice = priceFromString(row[2]);
+                    DateFormat format = new SimpleDateFormat("dd.MM.yyyy");
+                    Date expenseDate = format.parse(row[3]);
+
+                    Category expenseCategory = checkCategory(expenseUser, expCategory);
+                    Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
+                    Long expenseId = expenseService.saveNewExpense(expense).getId();
+                }
+                return "Траты из csv файла добавлены";
+            }
+            else {
+                return "Неверный csv-файл";
+            }
+        } catch (ParseException | IOException | CsvException e) {
+            e.printStackTrace();
+        }
+        return "Что-то пошло не так :(";
     }
 
     private static User checkUser(long id) {
@@ -203,6 +254,15 @@ public class TelegramMessageHandler {
                 if (expense.getId() == id) return true;
         }
         return false;
+    }
+
+    private static double priceFromString(String string) {
+        double expensePrice = 0.;
+        if (Pattern.matches(decimalWithDotPattern, string) || Pattern.matches(decimalInteger, string))
+            expensePrice = Double.parseDouble(string);
+        else if (Pattern.matches(decimalWithComaPattern, string))
+            expensePrice = Double.parseDouble(string.replace(",", "."));
+        return expensePrice;
     }
 
     private static Set<Expense> getAllUserExpensesForCurrentMonth(User user) {
@@ -304,4 +364,60 @@ public class TelegramMessageHandler {
     }
 
 
+    public static void sendMonthCSV () {
+        List<User> allUsers = userService.getUsers();
+        for (User user : allUsers) {
+            Set<Expense> userExpenses = getAllUserExpensesForPreviousMonth(user);
+            long userTgId = user.getTg_id();
+            File reportFile = new File("src/main/java/userscsv/report" + userTgId + ".csv");
+            try {
+                FileWriter outputFile = new FileWriter(reportFile);
+                CSVWriter writer = new CSVWriter(outputFile);
+                String[] header = {"id", "название", "категория", "сумма", "дата"};
+                writer.writeNext(header);
+                double expenseSum = 0.0;
+                for (Expense expense : userExpenses) {
+                    String id = Long.toString(expense.getId());
+                    String name = expense.getName();
+                    String cat = expense.getCategory().getName();
+                    String price = Double.toString(expense.getPrice());
+                    String date = expense.getDate().toString();
+
+                    String[] data = {id, name, cat, price, date};
+                    writer.writeNext(data);
+                    expenseSum += expense.getPrice();
+                }
+                String[] data = {"всего:", " ", " ", Double.toString(expenseSum), " "};
+                writer.writeNext(data);
+                writer.close();
+                TelegaBot.bot.execute(new SendDocument(userTgId, reportFile).caption("month report.csv"));
+            }
+            catch (IOException e) {}
+            //id название категория сумма дата
+
+        }
+    }
+
+    private static Set<Expense> getAllUserExpensesForPreviousMonth(User user) {
+        Set<Expense> allExpenses = user.getExpenses();
+        Set<Expense> monthExpenses = new HashSet<>();
+
+        Calendar calendarThisMonth = Calendar.getInstance();
+        calendarThisMonth.set(Calendar.DAY_OF_MONTH, 1);
+        calendarThisMonth.set(Calendar.HOUR_OF_DAY, 0);
+        Date currentMonth = calendarThisMonth.getTime();
+
+        Calendar calendarPreviousMonth = Calendar.getInstance();
+        calendarPreviousMonth.set(Calendar.DAY_OF_MONTH, 1);
+        calendarPreviousMonth.set(Calendar.HOUR_OF_DAY, 0);
+        calendarPreviousMonth.set(Calendar.MONTH, -1);
+        Date previousMonth = calendarPreviousMonth.getTime();
+
+        for (Expense expense : allExpenses) {
+            if (expense.getDate().before(currentMonth) && expense.getDate().after(previousMonth)) {
+                monthExpenses.add(expense);
+            }
+        }
+        return monthExpenses;
+    }
 }
