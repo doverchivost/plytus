@@ -271,8 +271,6 @@ public class TelegramMessageHandler {
         Set<Expense> monthExpenses = new HashSet<>();
 
         Calendar calendar = Calendar.getInstance();
-        //calendar.add(Calendar.MONTH, - 1);
-        //calendar.set(Calendar.DAY_OF_MONTH, calendar.getActualMaximum(Calendar.DAY_OF_MONTH));
         calendar.set(Calendar.DAY_OF_MONTH, 1);
         calendar.set(Calendar.HOUR_OF_DAY, 0);
         Date currentMonth = calendar.getTime();
@@ -318,7 +316,6 @@ public class TelegramMessageHandler {
         for(Expense expense : expenseSet)
             priceTotal += expense.getPrice();
 
-        //Map<String, Double> sortedByPrice = sort(categoryPrice, false);
         Map<String, Double> sortedByPrice = sort(categoryPrice);
         for (String category : sortedByPrice.keySet()) {
             double price = sortedByPrice.get(category);
