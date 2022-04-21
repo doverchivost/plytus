@@ -14,10 +14,7 @@ import com.plytus.plytus.services.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
@@ -192,16 +189,17 @@ public class TelegramMessageHandler {
         return answer;
     }
 
-    public static String addExpensesFromSCV(String fileName, long chatId) {
+    public static String addExpensesFromSCV(String fileName, long chatId) throws IOException {
         User expenseUser = checkUser(chatId);
-
         try (CSVReader reader = new CSVReader(new FileReader(fileName))) {
             List<String[]> lines = reader.readAll();
             String[] firstRow = lines.get(0)[0].split(";");
+            int counter = 0;
             if (firstRow[0].contains("название") && firstRow[1].contains("категория") &&
                     firstRow[2].contains("цена") && firstRow[3].contains("дата")) {
                 for (int i = 1; i < lines.size(); i++) {
                     String[] row = lines.get(i)[0].split(";");
+                    if (row.length == 0) continue;
                     String expenseName = row[0].toLowerCase();
                     String expCategory = row[1].toLowerCase();
                     double expensePrice = priceFromString(row[2]);
@@ -211,8 +209,9 @@ public class TelegramMessageHandler {
                     Category expenseCategory = checkCategory(expenseUser, expCategory);
                     Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
                     Long expenseId = expenseService.saveNewExpense(expense).getId();
+                    counter++;
                 }
-                return "Траты из csv файла добавлены";
+                return "Траты из csv файла (" + counter + " шт.) добавлены";
             }
             else {
                 return "Неверный csv-файл";
