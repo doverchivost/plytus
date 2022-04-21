@@ -67,8 +67,16 @@ public class TelegaBot {
                             String fileName = "src/main/java/userscsv/user" + chatId + ".csv";
                             Files.copy(is, Paths.get(fileName), StandardCopyOption.REPLACE_EXISTING);
 
-                            answer = TelegramMessageHandler.addExpensesFromSCV(fileName ,chatId);
-                            Files.delete(Paths.get(fileName));
+                            try {
+                                answer = TelegramMessageHandler.addExpensesFromSCV(fileName ,chatId);
+                            }
+                            catch (Exception e) {
+                                answer = "Ошибка с файлом :(\n" +
+                                        "Убедитесь, что в полях суммы используется точка!";
+                            }
+                            finally {
+                                Files.delete(Paths.get(fileName));
+                            }
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
