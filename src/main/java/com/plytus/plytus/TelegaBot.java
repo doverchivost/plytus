@@ -22,6 +22,7 @@ import java.util.TimerTask;
 public class TelegaBot {
     static TelegramBot bot;
     static final File exampleCSV = new File("src/main/java/example.csv");
+    static boolean reportsSent = false;
 
     public static void run() {
         String telegram_token = System.getenv("plytus_bot_token");
@@ -33,8 +34,13 @@ public class TelegaBot {
             public void run() {
                 Calendar cal = Calendar.getInstance();
                 int dayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
-                if (dayOfMonth == 1)
+                if (dayOfMonth == 1 && !reportsSent) {
                     TelegramMessageHandler.sendMonthCSV();
+                    reportsSent = true;
+                }
+                else {
+                    reportsSent = false;
+                }
             }
         }, 0, 24 * 60 * 60 * 1000);
 
