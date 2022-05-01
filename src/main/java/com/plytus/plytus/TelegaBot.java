@@ -44,10 +44,15 @@ public class TelegaBot {
                 String message = update.message().text();
                 String answer = "";
                 if (message != null) {
-                    message = message.trim();
-                    answer = TelegramMessageHandler.answer(chatId, message);
-                    if (message.equals("/add_from_csv")) {
-                        bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                    if (message.contains("*")) {
+                        answer = "Недопустимый символ _*_";
+                    }
+                    else {
+                        message = message.trim();
+                        answer = TelegramMessageHandler.answer(chatId, message);
+                        if (message.equals("/add_from_csv")) {
+                            bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                        }
                     }
                 }
                 else if (update.message().document() != null) {
