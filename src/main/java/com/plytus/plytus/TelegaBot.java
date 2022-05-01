@@ -45,9 +45,14 @@ public class TelegaBot {
                 String answer = "";
                 if (message != null) {
                     message = message.trim();
-                    answer = TelegramMessageHandler.answer(chatId, message);
-                    if (message.equals("/add_from_csv")) {
-                        bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                    if (message.contains("*")) {
+                        answer = "Недопустимый символ \"*\"";
+                    }
+                    else {
+                        answer = TelegramMessageHandler.answer(chatId, message);
+                        if (message.equals("/add_from_csv")) {
+                            bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                        }
                     }
                 }
                 else if (update.message().document() != null) {
