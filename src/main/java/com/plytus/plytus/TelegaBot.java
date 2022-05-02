@@ -22,6 +22,7 @@ import java.util.TimerTask;
 public class TelegaBot {
     static TelegramBot bot;
     static final File exampleCSV = new File("src/main/java/example.csv");
+    static boolean reportsSent = false;
 
     public static void run() {
         String telegram_token = System.getenv("plytus_bot_token");
@@ -33,8 +34,13 @@ public class TelegaBot {
             public void run() {
                 Calendar cal = Calendar.getInstance();
                 int dayOfMonth = cal.get(Calendar.DAY_OF_MONTH);
-                if (dayOfMonth == 1)
+                if (dayOfMonth == 1 && !reportsSent) {
                     TelegramMessageHandler.sendMonthCSV();
+                    reportsSent = true;
+                }
+                else {
+                    reportsSent = false;
+                }
             }
         }, 0, 24 * 60 * 60 * 1000);
 
@@ -44,10 +50,15 @@ public class TelegaBot {
                 String message = update.message().text();
                 String answer = "";
                 if (message != null) {
-                    message = message.trim();
-                    answer = TelegramMessageHandler.answer(chatId, message);
-                    if (message.equals("/add_from_csv")) {
-                        bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                    if (message.contains("*")) {
+                        answer = "Недопустимый символ _*_";
+                    }
+                    else {
+                        message = message.trim();
+                        answer = TelegramMessageHandler.answer(chatId, message);
+                        if (message.equals("/add_from_csv")) {
+                            bot.execute(new SendDocument(chatId, exampleCSV).caption("example.csv").fileName("example.csv"));
+                        }
                     }
                 }
                 else if (update.message().document() != null) {
