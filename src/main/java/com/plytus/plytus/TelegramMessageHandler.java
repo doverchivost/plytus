@@ -24,6 +24,7 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 @Controller
@@ -189,37 +190,87 @@ public class TelegramMessageHandler {
         return answer;
     }
 
-    public static String addExpensesFromSCV(String fileName, long chatId) throws IOException {
+    public static String addExpensesFromSCV(String file, long chatId) throws IOException {
         User expenseUser = checkUser(chatId);
-        try (CSVReader reader = new CSVReader(new FileReader(fileName))) {
-            List<String[]> lines = reader.readAll();
-            String[] firstRow = lines.get(0)[0].split(";");
-            int counter = 0;
-            if (firstRow[0].contains("название") && firstRow[1].contains("категория") &&
-                    firstRow[2].contains("цена") && firstRow[3].contains("дата")) {
-                for (int i = 1; i < lines.size(); i++) {
-                    String[] row = lines.get(i)[0].split(";");
-                    if (row.length == 0) continue;
-                    String expenseName = row[0].toLowerCase();
-                    String expCategory = row[1].toLowerCase();
-                    double expensePrice = priceFromString(row[2]);
-                    DateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-                    Date expenseDate = format.parse(row[3]);
 
-                    Category expenseCategory = checkCategory(expenseUser, expCategory);
-                    Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
-                    Long expenseId = expenseService.saveNewExpense(expense).getId();
-                    counter++;
-                }
-                return "Траты из csv файла (" + counter + " шт.) добавлены";
+        int[] columnOrder = new int[4];
+        try (BufferedReader reader = new BufferedReader(new FileReader(file));) {
+            String[] firstRow = reader.readLine().split(";");
+
+            //название;категория;цена;дата
+            for (int i = 1; i <= 4; i++) {
+                String s = firstRow[i - 1];
+                if (s.contains("название")) columnOrder[0] = i;
+                else if (s.contains("категория")) columnOrder[1] = i;
+                else if (s.contains("цена")) columnOrder[2] = i;
+                else if (s.contains("дата")) columnOrder[3] = i;
             }
-            else {
-                return "Неверный csv-файл";
+
+            if (!checkColumnOrderIsCorrect(columnOrder)) return "Неверный csv-файл";
+
+            int counter=0;
+            String row = "";
+            while ((row = reader.readLine()) != null) {
+                String[] cell = row.split(";");
+                if (cell.length < 4) continue;
+                String expenseName = cell[columnOrder[0]-1].toLowerCase();
+                String expCategory = cell[columnOrder[1]-1].toLowerCase();
+                double expensePrice = priceFromString(cell[columnOrder[2]-1]);
+                DateFormat format = new SimpleDateFormat("dd.MM.yyyy");
+                Date expenseDate = format.parse(cell[columnOrder[3]-1]);
+
+                Category expenseCategory = checkCategory(expenseUser, expCategory);
+                Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
+                Long expenseId = expenseService.saveNewExpense(expense).getId();
+                counter++;
             }
-        } catch (ParseException | IOException | CsvException e) {
+            return "Траты из csv файла (" + counter + " шт.) добавлены";
+
+        } catch (IOException | ParseException e) {
             e.printStackTrace();
         }
         return "Что-то пошло не так :(";
+
+//
+//        try (CSVReader reader = new CSVReader(new FileReader(fileName))) {
+//            List<String[]> lines = reader.readAll();
+//            String[] firstRow = lines.get(0)[0].split(";");
+//            int counter = 0;
+//            if (firstRow[0].contains("название") && firstRow[1].contains("категория") &&
+//                    firstRow[2].contains("цена") && firstRow[3].contains("дата")) {
+//                for (int i = 1; i < lines.size(); i++) {
+//                    String[] row = lines.get(i)[0].split(";");
+//                    if (row.length == 0) continue;
+//                    String expenseName = row[0].toLowerCase();
+//                    String expCategory = row[1].toLowerCase();
+//                    double expensePrice = priceFromString(row[2]);
+//                    DateFormat format = new SimpleDateFormat("dd.MM.yyyy");
+//                    Date expenseDate = format.parse(row[3]);
+//
+//                    Category expenseCategory = checkCategory(expenseUser, expCategory);
+//                    Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
+//                    Long expenseId = expenseService.saveNewExpense(expense).getId();
+//                    counter++;
+//                }
+//                return "Траты из csv файла (" + counter + " шт.) добавлены";
+//            }
+//            else {
+//                return "Неверный csv-файл";
+//            }
+//        } catch (ParseException | IOException | CsvException e) {
+//            e.printStackTrace();
+//        }
+//        return "Что-то пошло не так :(";
+    }
+
+    private static boolean checkColumnOrderIsCorrect(int[] columnOrder) {
+        if (IntStream.of(columnOrder).anyMatch(x -> x == 0)) return false;
+        for (int i = 0; i < columnOrder.length - 1; i ++) {
+            for (int j = i+1; j < columnOrder.length; j++) {
+                if (columnOrder[i] == columnOrder[j]) return false;
+            }
+        }
+        return true;
     }
 
     private static User checkUser(long id) {
