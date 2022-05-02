@@ -1,9 +1,6 @@
 package com.plytus.plytus;
 
-import com.opencsv.CSVReader;
 import com.opencsv.CSVWriter;
-import com.opencsv.exceptions.CsvException;
-import com.pengrad.telegrambot.TelegramBot;
 import com.pengrad.telegrambot.request.SendDocument;
 import com.plytus.plytus.model.Category;
 import com.plytus.plytus.model.Expense;
@@ -15,9 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -25,7 +19,6 @@ import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 @Controller
 public class TelegramMessageHandler {
@@ -230,37 +223,6 @@ public class TelegramMessageHandler {
             e.printStackTrace();
         }
         return "Что-то пошло не так :(";
-
-//
-//        try (CSVReader reader = new CSVReader(new FileReader(fileName))) {
-//            List<String[]> lines = reader.readAll();
-//            String[] firstRow = lines.get(0)[0].split(";");
-//            int counter = 0;
-//            if (firstRow[0].contains("название") && firstRow[1].contains("категория") &&
-//                    firstRow[2].contains("цена") && firstRow[3].contains("дата")) {
-//                for (int i = 1; i < lines.size(); i++) {
-//                    String[] row = lines.get(i)[0].split(";");
-//                    if (row.length == 0) continue;
-//                    String expenseName = row[0].toLowerCase();
-//                    String expCategory = row[1].toLowerCase();
-//                    double expensePrice = priceFromString(row[2]);
-//                    DateFormat format = new SimpleDateFormat("dd.MM.yyyy");
-//                    Date expenseDate = format.parse(row[3]);
-//
-//                    Category expenseCategory = checkCategory(expenseUser, expCategory);
-//                    Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
-//                    Long expenseId = expenseService.saveNewExpense(expense).getId();
-//                    counter++;
-//                }
-//                return "Траты из csv файла (" + counter + " шт.) добавлены";
-//            }
-//            else {
-//                return "Неверный csv-файл";
-//            }
-//        } catch (ParseException | IOException | CsvException e) {
-//            e.printStackTrace();
-//        }
-//        return "Что-то пошло не так :(";
     }
 
     private static boolean checkColumnOrderIsCorrect(int[] columnOrder) {
@@ -426,7 +388,7 @@ public class TelegramMessageHandler {
                     writer.writeNext(data);
                     expenseSum += expense.getPrice();
                 }
-                String[] data = {"всего:", " ", " ", Double.toString(expenseSum), " "};
+                String[] data = {"всего:", " ", " ", String.format("%.2f", expenseSum), " "};
                 writer.writeNext(data);
                 writer.close();
                 TelegaBot.bot.execute(new SendDocument(userTgId, reportFile).caption("month report.csv"));
