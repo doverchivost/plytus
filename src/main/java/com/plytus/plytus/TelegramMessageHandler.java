@@ -302,6 +302,8 @@ public class TelegramMessageHandler {
     private static String monthExpenseMessage(Set<Expense> expenseSet) {
         String answer = "id) _название_ (*категория*) : сумма\n\n";
         double priceTotal = 0;
+        expenseSet = expenseSet.stream().sorted(Comparator.comparing(Expense::getId))
+                .collect(Collectors.toCollection(LinkedHashSet::new));
         for (Expense expense : expenseSet) {
             answer += String.format("%1$s) _%2$s_ (*%3$s*) : %4$.2f\n",
                     expense.getId(), expense.getName(), expense.getCategory().getName(), expense.getPrice());
@@ -313,7 +315,7 @@ public class TelegramMessageHandler {
 
     private static String monthCategoryMessage(Set<Expense> expenseSet) {
         String answer = "*категория* - сумма\n\n";
-        Map<String, Double> categoryPrice = getCategoryPriceMap(expenseSet);
+        Map<String, Double> categoryPrice = sort(getCategoryPriceMap(expenseSet));
         double priceTotal = 0;
         Set<String> keys = categoryPrice.keySet();
         for (String key : keys) {
