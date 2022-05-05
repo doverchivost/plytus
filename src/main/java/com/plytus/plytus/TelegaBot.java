@@ -46,6 +46,7 @@ public class TelegaBot {
 
         bot.setUpdatesListener(updates -> {
             for (Update update : updates) {
+                if (update.message() == null) continue;
                 long chatId = update.message().chat().id();
                 String message = update.message().text();
                 String answer = "";
