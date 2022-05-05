@@ -61,7 +61,7 @@ public class TelegramMessageHandler {
                 break;
             case "/delete_expense":
                 answer = "Чтобы удалить трату отправьте боту сообщение со словом «удалить» или «delete» и номером " +
-                        "траты. Номер траты можно узнать по команде \n`list of expenses` \n" +
+                        "траты. Номер траты можно узнать по команде \n`/list_of_expenses` \n" +
                         "Например: \n" +
                         "   *удалить 1234*";
                 break;
@@ -72,20 +72,17 @@ public class TelegramMessageHandler {
                         "   *Категория 634 доставка еды*";
                 break;
             case "/list_of_expenses":
-                //answer = "я выведу список всех трат";
                 answer = monthExpenseMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/list_of_categories":
-                //answer = "я выведу список категорий трат за месяц";
                 answer = monthCategoryMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/list_with_percentage":
-                //answer = "я выведу список категорий трат за месяц в процентах";
                 answer = monthCategoryPercentMessage(getAllUserExpensesForCurrentMonth(expenseUser));
                 break;
             case "/add_from_csv":
                 answer = "Файл-пример в формате csv\n" +
-                        "Первая строка файла (названия колонок) будет игнорироваться";
+                        "Колонки могут быть в любом порядке, но все они должны присутствовать";
                 break;
         }
 
@@ -99,8 +96,6 @@ public class TelegramMessageHandler {
                 if (expenseExist) {
                     Expense expenseToDelete = expenseService.getExpenseById(expenseIdToDelete);
                     if (expenseToDelete.getOwner().getId() == expenseUser.getId()) {
-                        //expenseUser.getExpenses().remove(expenseToDelete);
-                        //expenseToDelete.getCategory().getExpenses().remove(expenseToDelete);
                         expenseService.deleteExpense(expenseToDelete);
                         answer = "Удалена трата с id = " + expenseIdToDelete;
                     } else {
@@ -110,7 +105,7 @@ public class TelegramMessageHandler {
                     answer = "Такой траты не существует!";
                 }
             } catch (NumberFormatException e) {
-                answer = "id должен быть цифрой";
+                answer = "id должен быть числом";
             }
         }
         else if (command.equals("категория") || command.equals("category")) {
@@ -129,8 +124,8 @@ public class TelegramMessageHandler {
                             Expense expenseToChange = expenseService.getExpenseById(expenseId);
                             expenseToChange.setCategory(newCategory);
                             expenseService.saveNewExpense(expenseToChange);
-                            answer = "У траты с id = ~" + expenseToChange.getId() + "~ теперь \n" +
-                                    "категория = ~" + expenseToChange.getCategory().getName() + "~";
+                            answer = "У траты с id = *" + expenseToChange.getId() + "* теперь \n" +
+                                    "категория = *" + expenseToChange.getCategory().getName() + "*";
                         } else {
                             answer = "Это не ваша трата! Вы не можете менять ее категорию.";
                         }
@@ -164,14 +159,13 @@ public class TelegramMessageHandler {
                 Expense expense = new Expense(expenseName, expenseDate, expensePrice, expenseCategory, expenseUser);
                 Long expenseId = expenseService.saveNewExpense(expense).getId();
                 answer = "Добавлена трата с \n" +
-                        "id = ~" + expenseId + "~\n" +
-                        "названием = ~" + expenseName + "~\n" +
-                        "ценой = ~" + expensePrice + "~\n" +
-                        "датой = ~" + expenseDate + "~\n" +
-                        "категорией = ~" + expenseCategory.getName() + "~\n" +
-                        "пользователем = ~" + expenseUser.getTg_id() + "~";
+                        "id = _" + expenseId + "_\n" +
+                        "названием = _" + expenseName + "_\n" +
+                        "ценой = _" + expensePrice + "_\n" +
+                        "датой = _" + expenseDate + "_\n" +
+                        "категорией = _" + expenseCategory.getName() + "_\n" +
+                        "пользователем = _" + expenseUser.getTg_id() + "_";
             }
-
             else {
                 answer = "Неверные параметры: цена";
             }
@@ -179,7 +173,6 @@ public class TelegramMessageHandler {
         else {
             answer = "что-то пошло не так :(";
         }
-
         return answer;
     }
 
@@ -217,7 +210,7 @@ public class TelegramMessageHandler {
                 Long expenseId = expenseService.saveNewExpense(expense).getId();
                 counter++;
             }
-            return "Траты из csv файла (" + counter + " шт.) добавлены";
+            return "Траты из csv файла (_" + counter + "_ шт.) добавлены";
 
         } catch (IOException | ParseException e) {
             e.printStackTrace();
@@ -296,33 +289,33 @@ public class TelegramMessageHandler {
     }
 
     private static String monthExpenseMessage(Set<Expense> expenseSet) {
-        String answer = "id) название (категория) : сумма\n\n";
+        String answer = "id) _название_ (*категория*) : сумма\n\n";
         double priceTotal = 0;
         for (Expense expense : expenseSet) {
-            answer += String.format("%1$s) %2$s (%3$s) : %4$.2f\n",
+            answer += String.format("%1$s) _%2$s_ (*%3$s*) : %4$.2f\n",
                     expense.getId(), expense.getName(), expense.getCategory().getName(), expense.getPrice());
             priceTotal += expense.getPrice();
         }
-        answer += String.format("\nСумма всех трат за месяц: %.2f", priceTotal);
+        answer += String.format("\nСумма всех трат за месяц: *%.2f*", priceTotal);
         return answer;
     }
 
     private static String monthCategoryMessage(Set<Expense> expenseSet) {
-        String answer = "категория - сумма\n\n";
+        String answer = "*категория* - сумма\n\n";
         Map<String, Double> categoryPrice = getCategoryPriceMap(expenseSet);
         double priceTotal = 0;
         Set<String> keys = categoryPrice.keySet();
         for (String key : keys) {
             double price = categoryPrice.get(key);
-            answer += String.format("%s - %.2f\n", key, price);
+            answer += String.format("*%s* - %.2f\n", key.replace("*", "\\*"), price);
             priceTotal += price;
         }
-        answer += String.format("\nСумма всех трат за месяц: %.2f", priceTotal);
+        answer += String.format("\nСумма всех трат за месяц: *%.2f*", priceTotal);
         return answer;
     }
 
     private static String monthCategoryPercentMessage(Set<Expense> expenseSet) {
-        String answer = "% категория (сумма)\n\n";
+        String answer = "*%* _категория_ (сумма)\n\n";
         Map<String, Double> categoryPrice = getCategoryPriceMap(expenseSet);
         double priceTotal = 0;
         for(Expense expense : expenseSet)
@@ -333,10 +326,10 @@ public class TelegramMessageHandler {
             double price = sortedByPrice.get(category);
             double percentPrice = price / priceTotal * 100;
             //answer += percentPrice + "% " + category + " (" + price + ")\n";
-            answer += String.format("%.2f%% %s (%.2f)\n", percentPrice, category, price);
+            answer += String.format("*%.2f%%* _%s_ (%.2f)\n", percentPrice, category, price);
         }
 
-        answer += String.format("\nСумма всех трат за месяц: %.2f", priceTotal);
+        answer += String.format("\nСумма всех трат за месяц: *%.2f*", priceTotal);
         return answer;
     }
 
@@ -363,7 +356,6 @@ public class TelegramMessageHandler {
 
        return sortedMapReverseOrder;
    }
-
 
     public static void sendMonthCSV () {
         List<User> allUsers = userService.getUsers();

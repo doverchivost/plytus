@@ -13,6 +13,7 @@
 	<version>0.0.1-SNAPSHOT</version>
 	<name>plytus</name>
 	<description>Project for Naumen Course</description>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -22,7 +23,6 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-web</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
@@ -37,22 +37,17 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
-
 		<dependency>
 			<groupId>com.github.pengrad</groupId>
 			<artifactId>java-telegram-bot-api</artifactId>
 			<version>5.7.0</version>
 		</dependency>
-
 		<dependency>
 			<groupId>com.opencsv</groupId>
 			<artifactId>opencsv</artifactId>
 			<version>5.3</version>
 		</dependency>
-
 	</dependencies>
-
-
 
 	<build>
 		<plugins>
@@ -68,5 +63,4 @@
 
 		</plugins>
 	</build>
-
 </project>
