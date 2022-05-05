@@ -63,7 +63,9 @@ public class TelegramMessageHandler {
                 answer = "Чтобы удалить трату отправьте боту сообщение со словом «удалить» или «delete» и номером " +
                         "траты. Номер траты можно узнать по команде \n`/list_of_expenses` \n" +
                         "Например: \n" +
-                        "   *удалить 1234*";
+                        "   *удалить 1234*\n\n" +
+                        "Чтобы удалить все траты за текущий месяц отправь:\n" +
+                        "   *удалить* \\*";
                 break;
             case "/change_category":
                 answer = "Чтобы изменить категорию у определённой траты, отправьте боту сообщение со словом " +
@@ -91,21 +93,30 @@ public class TelegramMessageHandler {
         String command = message.split(" ")[0].toLowerCase();
         if (command.equals("удалить") || command.equals("delete")) {
             try {
-                long expenseIdToDelete = Long.parseLong(message.split(" ")[1]);
-                boolean expenseExist = checkExpenseExist(expenseIdToDelete);
-                if (expenseExist) {
-                    Expense expenseToDelete = expenseService.getExpenseById(expenseIdToDelete);
-                    if (expenseToDelete.getOwner().getId() == expenseUser.getId()) {
-                        expenseService.deleteExpense(expenseToDelete);
-                        answer = "Удалена трата с id = " + expenseIdToDelete;
+                if (message.split(" ")[1].equals("*")) {
+                    //удалить все траты пользователя за месяц
+                    Set<Expense> monthExpenses = getAllUserExpensesForCurrentMonth(expenseUser);
+                    for (Expense expense : monthExpenses)
+                        expenseService.deleteExpense(expense);
+                    answer = "Все траты за текущий месяц удалены (*" + monthExpenses.size() + "* шт.)";
+                }
+                else {
+                    long expenseIdToDelete = Long.parseLong(message.split(" ")[1]);
+                    boolean expenseExist = checkExpenseExist(expenseIdToDelete);
+                    if (expenseExist) {
+                        Expense expenseToDelete = expenseService.getExpenseById(expenseIdToDelete);
+                        if (expenseToDelete.getOwner().getId() == expenseUser.getId()) {
+                            expenseService.deleteExpense(expenseToDelete);
+                            answer = "Удалена трата с id = " + expenseIdToDelete;
+                        } else {
+                            answer = "Это не ваша трата! Вы не можете ее удалить.";
+                        }
                     } else {
-                        answer = "Это не ваша трата! Вы не можете ее удалить.";
+                        answer = "Такой траты не существует!";
                     }
-                } else {
-                    answer = "Такой траты не существует!";
                 }
             } catch (NumberFormatException e) {
-                answer = "id должен быть числом";
+                answer = "id должен быть числом или звездочкой";
             }
         }
         else if (command.equals("категория") || command.equals("category")) {
